@@ -1,5 +1,5 @@
 // ================= CONFIGURAÇÃO DO SUPABASE =================
-const SUPABASE_URL = 'sb_publishable_CBF5_6YhFQ7rkb10aAt7mw_xPUO3yfV';
+const SUPABASE_URL = 'https://iaadqwzjfyduwprobimb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYWRxd3pqZnlkdXdwcm9iaW1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzgyNzIsImV4cCI6MjEwNzMxNDI3Mn0.PC9pysl9XX_cEo9BcEOau0OU3xbm6eCtQUMBGo0DE0E';
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
