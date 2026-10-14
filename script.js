@@ -337,9 +337,8 @@ function renderizarDesafioAluno() {
     const formResumo = document.getElementById('formResumoAluno');
     const textarea = document.getElementById('resumoTexto');
     const btnEnviar = document.getElementById('btnEnviarResumo');
-    
-    // Vamos reaproveitar a div de mensagem de erro para dar os avisos de sucesso também
     const msgPrazo = document.getElementById('msgPrazoEncerrado'); 
+    
     const hoje = obterDataLocalString();
 
     if (desafio.misterio) {
@@ -351,34 +350,41 @@ function renderizarDesafioAluno() {
         areaMisterio.classList.add('hidden');
     }
 
-    // Verifica se o aluno já enviou o resumo deste desafio específico ou se tem algum pendente
+    // Procura se o aluno já enviou resposta para ESTE desafio específico (não importa o status)
     const resumoEnviado = estadoApp.resumos.find(r => 
         String(r.aluno_id) === String(u.id) && 
-        (r.texto.startsWith(`[${desafio.titulo}]`) || r.status === 'pendente')
+        r.texto.startsWith(`[${desafio.titulo}]`)
     );
 
-    // Reseta as classes de design da mensagem
+    // Reseta o design das mensagens
     msgPrazo.className = "hidden mt-3 p-3 border rounded-xl text-xs font-bold text-center";
 
+    // 1. Verifica se já enviou (Bloqueia)
     if (resumoEnviado) {
-        // BLOQUEIA O CAMPO: Aluno já enviou
         textarea.disabled = true;
         textarea.value = "";
-        textarea.placeholder = "✅ Você já enviou sua resposta para este desafio!";
         textarea.classList.add('opacity-40', 'cursor-not-allowed');
-        
         btnEnviar.classList.add('hidden');
         msgPrazo.classList.remove('hidden');
-        
+
         if (resumoEnviado.status === 'aprovado') {
+            textarea.placeholder = "✅ Resumo aprovado!";
             msgPrazo.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
             msgPrazo.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> Resumo avaliado e aprovado! (+5 XP)';
+            
+        } else if (resumoEnviado.status === 'recusado') {
+            textarea.placeholder = "❌ Resumo recusado.";
+            msgPrazo.classList.add('bg-red-500/10', 'border-red-500/30', 'text-red-400');
+            msgPrazo.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i> O seu resumo foi recusado pelo professor e não pontuou.';
+            
         } else {
+            textarea.placeholder = "⏳ Aguardando avaliação...";
             msgPrazo.classList.add('bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
             msgPrazo.innerHTML = '<i class="fa-solid fa-clock-rotate-left mr-1"></i> Resumo enviado! Aguardando o professor avaliar.';
         }
+        
+    // 2. Verifica se o prazo já passou (Bloqueia)
     } else if (hoje > desafio.prazo) {
-        // BLOQUEIA O CAMPO: Prazo encerrou
         textarea.disabled = true;
         textarea.value = "";
         textarea.placeholder = "Envio encerrado. Aguarde o próximo desafio.";
@@ -388,8 +394,9 @@ function renderizarDesafioAluno() {
         msgPrazo.classList.remove('hidden');
         msgPrazo.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-400');
         msgPrazo.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> O prazo para envio deste desafio já encerrou.';
+        
+    // 3. Caso contrário, permite digitar (Libera)
     } else {
-        // LIBERA O CAMPO: Pode enviar
         textarea.disabled = false;
         textarea.value = "";
         textarea.placeholder = "Escreva seu resumo ou respostas aqui...";
@@ -616,8 +623,8 @@ async function aprovarResumo(resumo_id, aluno_id) {
 }
 
 async function rejeitarResumo(resumo_id) {
-    if(confirm("Apagar/rejeitar este resumo?")) {
-        await supabaseClient.from('resumos').delete().eq('id', resumo_id);
+    if(confirm("Deseja recusar este resumo? O aluno não ganhará os pontos e não poderá reenviar.")) {
+        await supabaseClient.from('resumos').update({ status: 'recusado' }).eq('id', resumo_id);
         await carregarDadosDoServidor();
         atualizarTelaAuth();
     }
