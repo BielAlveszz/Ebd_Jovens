@@ -1,8 +1,22 @@
 // ================= CONFIGURAÇÃO DO SUPABASE =================
-const SUPABASE_URL = 'https://iaadqwzjfyduwprobimb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhYWRxd3pqZnlkdXdwcm9iaW1iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzgyNzIsImV4cCI6MjEwNzMxNDI3Mn0.PC9pysl9XX_cEo9BcEOau0OU3xbm6eCtQUMBGo0DE0E';
+const SUPABASE_URL = 'COLOQUE_SUA_URL_AQUI'; 
+const SUPABASE_ANON_KEY = 'COLOQUE_SUA_CHAVE_ANON_AQUI'; 
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Banco de Devocionais de Filipenses
+const devocionais = [
+    { titulo: "Alegria em meio às algemas", texto: "Mesmo preso, Paulo encontrava motivos para se alegrar e espalhar o evangelho. Hoje, escolha focar naquilo que Deus está a fazer, e não nas suas limitações ou problemas.", versiculo: "Filipenses 1:12" },
+    { titulo: "O Viver é Cristo", texto: "Para Paulo, viver significava servir a Cristo, e morrer seria lucro. Qual é a sua maior motivação para acordar todos os dias? Que Jesus seja o centro de hoje.", versiculo: "Filipenses 1:21" },
+    { titulo: "A Atitude de Cristo", texto: "Jesus abriu mão da sua glória para nos servir. Pratique a humildade hoje, colocando as necessidades dos outros antes das suas, sem buscar reconhecimento.", versiculo: "Filipenses 2:5-7" },
+    { titulo: "Brilhando como Estrelas", texto: "Num mundo corrompido, somos chamados a brilhar através de atitudes sem murmuração. Evite reclamar hoje e seja luz onde você passar!", versiculo: "Filipenses 2:14-15" },
+    { titulo: "Esquecendo o Passado", texto: "Não deixe os seus erros do passado definirem o seu futuro com Deus. Prossiga para o alvo e para a vocação celestial que Ele tem para si!", versiculo: "Filipenses 3:13-14" },
+    { titulo: "A Nossa Pátria está nos Céus", texto: "A nossa verdadeira cidadania não é terrena, mas celestial. Viva o dia de hoje com os olhos fixos na eternidade e nas promessas do Senhor.", versiculo: "Filipenses 3:20" },
+    { titulo: "Alegria Constante", texto: "A verdadeira alegria do cristão não depende das circunstâncias ao seu redor, mas do Senhor. Regozijai-vos sempre!", versiculo: "Filipenses 4:4" },
+    { titulo: "Paz que Excede o Entendimento", texto: "Entregue as suas ansiedades e medos a Deus em oração. A paz dEle, que ninguém consegue explicar, guardará a sua mente e o seu coração.", versiculo: "Filipenses 4:6-7" },
+    { titulo: "Filtre a sua Mente", texto: "Tudo o que é verdadeiro, nobre e puro... pense nisso! Filtre o que você consome nas redes sociais e alimente a sua mente com o que edifica.", versiculo: "Filipenses 4:8" },
+    { titulo: "Posso todas as coisas", texto: "A nossa força não vem de nós mesmos, mas daquele que nos fortalece em qualquer situação, seja na fartura ou na escassez.", versiculo: "Filipenses 4:13" }
+];
 
 let estadoApp = {
     usuarioLogado: null,
@@ -30,6 +44,19 @@ function obterDataLocalString() {
     const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
     const dia = String(dataLocal.getDate()).padStart(2, '0');
     return `${ano}-${mes}-${dia}`;
+}
+
+function carregarDevocionalDiario() {
+    const hoje = new Date();
+    const diaDoAno = Math.floor((hoje - new Date(hoje.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+    const devocional = devocionais[diaDoAno % devocionais.length];
+    
+    const tituloEl = document.getElementById('devoTitulo');
+    if(tituloEl) {
+        tituloEl.textContent = devocional.titulo;
+        document.getElementById('devoTexto').textContent = devocional.texto;
+        document.getElementById('devoVersiculo').textContent = devocional.versiculo;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -80,12 +107,12 @@ function alternarAbaAuth(aba) {
     const btnL = document.getElementById('tabBtnLogin'), btnR = document.getElementById('tabBtnRegistro');
     const formL = document.getElementById('formLogin'), formR = document.getElementById('formRegistro');
     if (aba === 'login') {
-        btnL.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow";
-        btnR.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        btnL.className = "py-2 text-xs font-bold rounded-lg transition bg-brand-600 text-white shadow";
+        btnR.className = "py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white";
         formL.classList.remove('hidden'); formR.classList.add('hidden');
     } else {
-        btnR.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow";
-        btnL.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        btnR.className = "py-2 text-xs font-bold rounded-lg transition bg-brand-600 text-white shadow";
+        btnL.className = "py-2 text-xs font-bold rounded-lg transition text-slate-400 hover:text-white";
         formR.classList.remove('hidden'); formL.classList.add('hidden');
     }
 }
@@ -131,7 +158,6 @@ async function realizarRegistro(e) {
     }
 
     const senhaHash = await criptografarSenha(senha);
-
     const tipoUsuario = estadoApp.alunos.length === 0 ? 'professor' : 'aluno';
 
     const novoUsuario = { 
@@ -147,7 +173,6 @@ async function realizarRegistro(e) {
     
     if (error) {
         alert('Erro ao registrar no servidor.');
-        console.error(error);
         return;
     }
 
@@ -203,7 +228,6 @@ function atualizarTelaAuth() {
         document.getElementById('painelAluno').classList.remove('hidden');
         document.getElementById('painelExtratoAluno').classList.remove('hidden');
         document.getElementById('painelProfessor').classList.add('hidden');
-        
         alunoStats.classList.remove('hidden');
         
         document.getElementById('statPontos').textContent = u.pontos || 0;
@@ -211,6 +235,7 @@ function atualizarTelaAuth() {
         const pos = [...apenasAlunos].sort((a,b) => b.pontos - a.pontos).findIndex(a => a.id === u.id) + 1;
         document.getElementById('statPosicao').textContent = (pos > 0 ? pos : 1) + 'º';
 
+        carregarDevocionalDiario();
         renderizarDesafioAluno();
         renderizarVotacaoAluno();
         renderizarHistoricoAluno(u.id);
@@ -219,7 +244,6 @@ function atualizarTelaAuth() {
         document.getElementById('painelProfessor').classList.remove('hidden');
         document.getElementById('painelAluno').classList.add('hidden');
         document.getElementById('painelExtratoAluno').classList.add('hidden');
-        
         alunoStats.classList.add('hidden');
         
         document.getElementById('cfgDesafioTitulo').value = estadoApp.desafioAtual.titulo;
@@ -307,7 +331,7 @@ function renderizarRegrasAluno() {
     }
     
     container.innerHTML = estadoApp.motivos.map(m => `
-        <div class="flex justify-between items-center bg-slate-900/50 p-2.5 rounded border border-slate-700/50">
+        <div class="flex justify-between items-center bg-slate-800 p-2.5 rounded border border-slate-700">
             <span class="text-xs text-slate-300 font-medium">${m.motivo}</span>
             <span class="text-xs font-bold text-brand-400 bg-brand-500/10 px-2 py-1 rounded">+${m.pontos} pts</span>
         </div>
@@ -320,7 +344,6 @@ async function enviarSugestao(e) {
     const u = estadoApp.usuarioLogado;
     
     await supabaseClient.from('sugestoes').insert([{ aluno_nome: u.nome, texto: texto, data: obterDataLocalString() }]);
-    
     alert('Sugestão enviada com sucesso!');
     document.getElementById('inputSugestao').value = '';
     await carregarDadosDoServidor();
@@ -350,16 +373,15 @@ function renderizarDesafioAluno() {
         areaMisterio.classList.add('hidden');
     }
 
-    // Procura se o aluno já enviou resposta para ESTE desafio específico (não importa o status)
+    // Procura se já enviou ESTE desafio
     const resumoEnviado = estadoApp.resumos.find(r => 
         String(r.aluno_id) === String(u.id) && 
         r.texto.startsWith(`[${desafio.titulo}]`)
     );
 
-    // Reseta o design das mensagens
     msgPrazo.className = "hidden mt-3 p-3 border rounded-xl text-xs font-bold text-center";
 
-    // 1. Verifica se já enviou (Bloqueia)
+    // 1. Já enviou? Bloqueia.
     if (resumoEnviado) {
         textarea.disabled = true;
         textarea.value = "";
@@ -368,22 +390,22 @@ function renderizarDesafioAluno() {
         msgPrazo.classList.remove('hidden');
 
         if (resumoEnviado.status === 'aprovado') {
-            textarea.placeholder = "✅ Resumo aprovado!";
+            textarea.placeholder = "✅ Desafio aprovado!";
             msgPrazo.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
-            msgPrazo.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> Resumo avaliado e aprovado! (+5 XP)';
+            msgPrazo.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> Desafio avaliado e aprovado! (+5 XP)';
             
         } else if (resumoEnviado.status === 'recusado') {
-            textarea.placeholder = "❌ Resumo recusado.";
+            textarea.placeholder = "❌ Desafio recusado.";
             msgPrazo.classList.add('bg-red-500/10', 'border-red-500/30', 'text-red-400');
-            msgPrazo.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i> O seu resumo foi recusado pelo professor e não pontuou.';
+            msgPrazo.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1"></i> O seu desafio foi recusado pelo professor e não pontuou.';
             
         } else {
             textarea.placeholder = "⏳ Aguardando avaliação...";
             msgPrazo.classList.add('bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
-            msgPrazo.innerHTML = '<i class="fa-solid fa-clock-rotate-left mr-1"></i> Resumo enviado! Aguardando o professor avaliar.';
+            msgPrazo.innerHTML = '<i class="fa-solid fa-clock-rotate-left mr-1"></i> Desafio enviado! Aguardando o professor avaliar.';
         }
         
-    // 2. Verifica se o prazo já passou (Bloqueia)
+    // 2. Prazo passou? Bloqueia.
     } else if (hoje > desafio.prazo) {
         textarea.disabled = true;
         textarea.value = "";
@@ -395,11 +417,11 @@ function renderizarDesafioAluno() {
         msgPrazo.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-400');
         msgPrazo.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> O prazo para envio deste desafio já encerrou.';
         
-    // 3. Caso contrário, permite digitar (Libera)
+    // 3. Tudo OK? Libera campo.
     } else {
         textarea.disabled = false;
         textarea.value = "";
-        textarea.placeholder = "Escreva seu resumo ou respostas aqui...";
+        textarea.placeholder = "Escreva sua resposta aqui...";
         textarea.classList.remove('opacity-40', 'cursor-not-allowed');
         
         btnEnviar.classList.remove('hidden');
@@ -421,14 +443,13 @@ async function salvarDesafio(e) {
 async function enviarResumo(e) {
     e.preventDefault();
     if (estadoApp.desafioAtual.misterio) return alert("Modo Mistério ativado. Envio bloqueado.");
-    
     const hoje = obterDataLocalString();
     if (hoje > estadoApp.desafioAtual.prazo) return alert("Erro: O prazo para este desafio já foi encerrado.");
 
     const textoDigitado = document.getElementById('resumoTexto').value;
     const u = estadoApp.usuarioLogado;
     
-    // Adiciona o título do desafio de forma oculta no começo do texto para o sistema rastrear
+    // Anexa o título do desafio no topo para que possamos rastrear
     const textoFinal = `[${estadoApp.desafioAtual.titulo}]\n\n${textoDigitado}`;
     
     await supabaseClient.from('resumos').insert([{
@@ -440,10 +461,8 @@ async function enviarResumo(e) {
     }]);
 
     document.getElementById('resumoTexto').value = '';
-    
-    // Recarrega os dados e atualiza a tela na hora para bloquear a caixa sem precisar dar F5
     await carregarDadosDoServidor();
-    atualizarTelaAuth(); 
+    atualizarTelaAuth();
 }
 
 async function salvarVotacao(e) {
@@ -477,7 +496,7 @@ function renderizarVotacaoAluno() {
         container.innerHTML = `<p class="text-xs text-emerald-400 font-bold mt-2"><i class="fa-solid fa-check"></i> Você já votou nesta enquete!</p>`;
     } else {
         container.innerHTML = v.opcoes.map(op => `
-            <button onclick="registrarVoto(${op.id})" class="w-full bg-slate-700 hover:bg-brand-600 text-white text-xs font-bold py-2 rounded mt-2 shadow transition">
+            <button onclick="registrarVoto(${op.id})" class="w-full bg-slate-800 border border-slate-700 hover:border-brand-500 hover:bg-slate-700 text-white text-xs font-bold py-2.5 rounded-xl shadow transition">
                 ${op.texto}
             </button>
         `).join('');
@@ -508,7 +527,7 @@ function renderizarVotacaoProf() {
     res.innerHTML = `
         <div class="font-bold mb-3 text-brand-400 text-sm">Enquete: <span class="text-white">${v.pergunta}</span> <span class="text-xs text-slate-400">(${total} votos)</span></div>
         ${v.opcoes.map(op => `
-            <div class="flex justify-between text-xs text-slate-300 bg-slate-700 p-2 rounded mb-1">
+            <div class="flex justify-between text-xs text-slate-300 bg-slate-800 p-2 rounded mb-1">
                 <span>${op.texto}</span> <strong class="text-brand-400">${op.votos} votos</strong>
             </div>
         `).join('')}
@@ -575,7 +594,7 @@ function renderizarMuralSugestoes() {
     if (estadoApp.sugestoes.length === 0) return container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhuma sugestão.</p>`;
     
     container.innerHTML = estadoApp.sugestoes.slice().reverse().map(s => `
-        <div class="bg-slate-800 p-2.5 rounded-lg mb-2 border border-slate-700">
+        <div class="bg-slate-800 p-3 rounded-xl mb-2 border border-slate-700">
             <span class="text-brand-400 text-xs font-bold">${s.aluno_nome}</span> <span class="text-[10px] text-slate-400">${s.data.split('-').reverse().join('/')}</span>
             <p class="text-xs text-slate-300 mt-1">${s.texto}</p>
         </div>
@@ -586,18 +605,43 @@ function renderizarResumosPendentes() {
     const container = document.getElementById('listaResumosPendentes');
     const pendentes = estadoApp.resumos.filter(r => r.status === 'pendente');
     
-    if (pendentes.length === 0) return container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhum resumo pendente.</p>`;
+    if (pendentes.length === 0) return container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhum desafio pendente de avaliação.</p>`;
 
-    container.innerHTML = pendentes.map(r => `
-        <div class="bg-slate-800 p-3.5 rounded-lg mb-3 border border-slate-700">
-            <p class="font-bold text-brand-400 text-sm mb-2">${r.aluno_nome}</p>
-            <p class="text-xs text-slate-200 mb-3 bg-slate-900 p-2 rounded italic">"${r.texto}"</p>
-            <div class="flex gap-2">
-                <button onclick="rejeitarResumo('${r.id}')" class="bg-red-900/50 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded font-bold transition">Recusar</button>
-                <button onclick="aprovarResumo('${r.id}', '${r.aluno_id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-bold transition">Aprovar Resumo</button>
+    container.innerHTML = pendentes.map(r => {
+        let tituloDesafio = "Desafio";
+        let textoAluno = r.texto;
+        
+        // Separa o título (dentro dos colchetes) do texto principal
+        if (r.texto.startsWith('[')) {
+            const fimTitulo = r.texto.indexOf(']');
+            if (fimTitulo !== -1) {
+                tituloDesafio = r.texto.substring(1, fimTitulo);
+                textoAluno = r.texto.substring(fimTitulo + 1).trim();
+            }
+        }
+
+        return `
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
+                <p class="font-bold text-white text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-user text-brand-400"></i> ${r.aluno_nome}
+                </p>
+                <span class="text-[10px] bg-brand-500/20 border border-brand-500/30 text-brand-400 px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider truncate max-w-[200px]" title="${tituloDesafio}">
+                    ${tituloDesafio}
+                </span>
+            </div>
+            
+            <div class="text-xs text-slate-200 mb-4 bg-slate-900 p-4 rounded-xl border border-slate-800 leading-relaxed">
+                ${textoAluno.replace(/\n/g, '<br>')}
+            </div>
+            
+            <div class="flex gap-2 justify-end">
+                <button onclick="rejeitarResumo('${r.id}')" class="bg-slate-700 hover:bg-red-500/20 text-slate-300 hover:text-red-400 border border-transparent hover:border-red-500/30 text-xs px-4 py-2 rounded-xl font-bold transition">Recusar</button>
+                <button onclick="aprovarResumo('${r.id}', '${r.aluno_id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 text-xs px-4 py-2 rounded-xl font-bold transition"><i class="fa-solid fa-check mr-1"></i> Aprovar Desafio</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function aprovarResumo(resumo_id, aluno_id) {
@@ -612,18 +656,19 @@ async function aprovarResumo(resumo_id, aluno_id) {
         await supabaseClient.from('historico').insert([{ 
             aluno_id: aluno_id, 
             data: obterDataLocalString(), 
-            motivo: 'Resumo do Desafio', 
+            motivo: 'Desafio Concluído', 
             pontos: pontosAdd 
         }]);
     }
     
     await carregarDadosDoServidor();
     atualizarTelaAuth();
-    alert(`Resumo aprovado! O aluno ganhou +5 pontos automaticamente.`);
+    alert(`Desafio aprovado com sucesso! O aluno ganhou +5 pontos.`);
 }
 
+// Em vez de APAGAR do banco, agora a função apenas atualiza para RECUSADO
 async function rejeitarResumo(resumo_id) {
-    if(confirm("Deseja recusar este resumo? O aluno não ganhará os pontos e não poderá reenviar.")) {
+    if(confirm("Deseja recusar este desafio? O aluno não ganhará os pontos e não poderá reenviar.")) {
         await supabaseClient.from('resumos').update({ status: 'recusado' }).eq('id', resumo_id);
         await carregarDadosDoServidor();
         atualizarTelaAuth();
@@ -640,7 +685,7 @@ function renderizarAlunosGeral() {
     }
 
     container.innerHTML = apenasAlunos.map(a => `
-        <div class="bg-slate-800/40 border border-slate-700/50 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="bg-slate-800 border border-slate-700 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center space-x-3">
                 <div class="w-9 h-9 rounded-lg bg-brand-600/20 text-brand-400 font-bold text-xs flex items-center justify-center border border-brand-500/30">${a.avatar}</div>
                 <div>
