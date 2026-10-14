@@ -10,6 +10,7 @@ let estadoApp = {
     resumos: [],
     historico: [],
     sugestoes: [],
+    motivos: [],
     desafioAtual: { titulo: "Preparem-se...", prazo: "2026-10-18", misterio: true },
     votacaoAtual: null
 };
@@ -48,18 +49,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function carregarDadosDoServidor() {
     try {
-        // Buscando da tabela 'matriculados'
         const { data: dAlunos } = await supabaseClient.from('matriculados').select('*');
         if (dAlunos) estadoApp.alunos = dAlunos;
 
         const { data: dHist } = await supabaseClient.from('historico').select('*');
         if (dHist) estadoApp.historico = dHist;
 
+        const { data: dResumos } = await supabaseClient.from('resumos').select('*');
+        if (dResumos) estadoApp.resumos = dResumos;
+
+        const { data: dSugestoes } = await supabaseClient.from('sugestoes').select('*');
+        if (dSugestoes) estadoApp.sugestoes = dSugestoes;
+
+        const { data: dMotivos } = await supabaseClient.from('motivos_pontos').select('*');
+        if (dMotivos) estadoApp.motivos = dMotivos;
+
         const { data: dConfigs } = await supabaseClient.from('configuracoes').select('*');
         if (dConfigs) {
             const cfgDesafio = dConfigs.find(c => c.chave === 'desafio');
             if (cfgDesafio) estadoApp.desafioAtual = cfgDesafio.valor;
-
             const cfgVotacao = dConfigs.find(c => c.chave === 'votacao');
             if (cfgVotacao) estadoApp.votacaoAtual = cfgVotacao.valor;
         }
@@ -72,12 +80,12 @@ function alternarAbaAuth(aba) {
     const btnL = document.getElementById('tabBtnLogin'), btnR = document.getElementById('tabBtnRegistro');
     const formL = document.getElementById('formLogin'), formR = document.getElementById('formRegistro');
     if (aba === 'login') {
-        btnL.className = "py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow";
-        btnR.className = "py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white";
+        btnL.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow";
+        btnR.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
         formL.classList.remove('hidden'); formR.classList.add('hidden');
     } else {
-        btnR.className = "py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow";
-        btnL.className = "py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white";
+        btnR.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-brand-600 text-white shadow";
+        btnL.className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
         formR.classList.remove('hidden'); formL.classList.add('hidden');
     }
 }
@@ -124,7 +132,6 @@ async function realizarRegistro(e) {
 
     const senhaHash = await criptografarSenha(senha);
 
-    // Se a tabela estiver vazia, o primeiro usuário cadastrado vira PROFESSOR automaticamente!
     const tipoUsuario = estadoApp.alunos.length === 0 ? 'professor' : 'aluno';
 
     const novoUsuario = { 
@@ -207,6 +214,7 @@ function atualizarTelaAuth() {
         renderizarDesafioAluno();
         renderizarVotacaoAluno();
         renderizarHistoricoAluno(u.id);
+        renderizarRegrasAluno();
     } else {
         document.getElementById('painelProfessor').classList.remove('hidden');
         document.getElementById('painelAluno').classList.add('hidden');
@@ -234,7 +242,7 @@ function renderizarRankingGeral() {
     const rankingOrdenado = [...apenasAlunos].sort((a,b) => (b.pontos || 0) - (a.pontos || 0));
     
     if (rankingOrdenado.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-500">Nenhum aluno cadastrado para o Ranking.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-xs text-slate-500">Nenhum aluno cadastrado.</td></tr>`;
         return;
     }
 
@@ -265,17 +273,43 @@ function renderizarRankingGeral() {
 function renderizarHistoricoAluno(id) {
     const container = document.getElementById('listaHistoricoAluno');
     const meusPontos = estadoApp.historico.filter(h => String(h.aluno_id) === String(id)).reverse();
+    
     if(meusPontos.length === 0) {
         container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhum ponto registrado ainda.</p>`;
         return;
     }
-    container.innerHTML = meusPontos.map(h => `
-        <div class="flex justify-between items-center bg-slate-800/50 p-2.5 rounded-lg border border-slate-700/50">
+    
+    container.innerHTML = meusPontos.map(h => {
+        const isNegativo = h.pontos < 0;
+        const corTexto = isNegativo ? 'text-red-400' : 'text-emerald-400';
+        const corBg = isNegativo ? 'bg-red-500/10' : 'bg-emerald-500/10';
+        const sinal = isNegativo ? '' : '+';
+        
+        return `
+        <div class="flex justify-between items-center bg-slate-800/50 p-2.5 rounded-lg border border-slate-700/50 mb-2">
             <div>
                 <p class="text-xs font-bold text-white">${h.motivo}</p>
                 <p class="text-[10px] text-slate-400">${h.data.split('-').reverse().join('/')}</p>
             </div>
-            <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded"> +${h.pontos} pt </span>
+            <span class="text-xs font-bold ${corTexto} ${corBg} px-2 py-1 rounded"> ${sinal}${h.pontos} pt </span>
+        </div>
+        `;
+    }).join('');
+}
+
+function renderizarRegrasAluno() {
+    const container = document.getElementById('listaRegrasAluno');
+    if (!container) return;
+    
+    if (estadoApp.motivos.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhuma regra extra cadastrada.</p>`;
+        return;
+    }
+    
+    container.innerHTML = estadoApp.motivos.map(m => `
+        <div class="flex justify-between items-center bg-slate-900/50 p-2.5 rounded border border-slate-700/50">
+            <span class="text-xs text-slate-300 font-medium">${m.motivo}</span>
+            <span class="text-xs font-bold text-brand-400 bg-brand-500/10 px-2 py-1 rounded">+${m.pontos} pts</span>
         </div>
     `).join('');
 }
@@ -283,8 +317,13 @@ function renderizarHistoricoAluno(id) {
 async function enviarSugestao(e) {
     e.preventDefault();
     const texto = document.getElementById('inputSugestao').value;
-    alert('Sugestão enviada para os professores!');
+    const u = estadoApp.usuarioLogado;
+    
+    await supabaseClient.from('sugestoes').insert([{ aluno_nome: u.nome, texto: texto, data: obterDataLocalString() }]);
+    
+    alert('Sugestão enviada com sucesso!');
     document.getElementById('inputSugestao').value = '';
+    await carregarDadosDoServidor();
 }
 
 function renderizarDesafioAluno() {
@@ -336,19 +375,21 @@ async function salvarDesafio(e) {
 
 async function enviarResumo(e) {
     e.preventDefault();
-    if (estadoApp.desafioAtual.misterio) {
-        alert("O Modo Mistério está ativado. Envio bloqueado.");
-        return;
-    }
-
+    if (estadoApp.desafioAtual.misterio) return alert("Modo Mistério ativado. Envio bloqueado.");
+    
     const hoje = obterDataLocalString();
-    if (hoje > estadoApp.desafioAtual.prazo) {
-        alert("Erro: O prazo para este desafio já foi encerrado.");
-        return;
-    }
+    if (hoje > estadoApp.desafioAtual.prazo) return alert("Erro: O prazo para este desafio já foi encerrado.");
 
-    alert('Resumo enviado para validação!');
+    const texto = document.getElementById('resumoTexto').value;
+    const u = estadoApp.usuarioLogado;
+    
+    await supabaseClient.from('resumos').insert([{
+        aluno_id: u.id, aluno_nome: u.nome, texto: texto, data: obterDataLocalString(), status: 'pendente'
+    }]);
+
+    alert('Resumo enviado para avaliação!');
     document.getElementById('resumoTexto').value = '';
+    await carregarDadosDoServidor();
 }
 
 async function salvarVotacao(e) {
@@ -370,36 +411,91 @@ async function salvarVotacao(e) {
 }
 
 function renderizarVotacaoAluno() {
-    const area = document.getElementById('areaVotacaoAluno');
     const container = document.getElementById('opcoesVotacao');
     const v = estadoApp.votacaoAtual;
+    const u = estadoApp.usuarioLogado;
     
-    if(!v) { area.classList.add('hidden'); return; }
-    area.classList.remove('hidden');
+    if(!v || !v.pergunta) return document.getElementById('areaVotacaoAluno').classList.add('hidden');
+    document.getElementById('areaVotacaoAluno').classList.remove('hidden');
     document.getElementById('votacaoPergunta').textContent = v.pergunta;
-    container.innerHTML = `<p class="text-xs text-slate-400">Enquete ativa na plataforma.</p>`;
+    
+    if (v.votaram && v.votaram.includes(u.id)) {
+        container.innerHTML = `<p class="text-xs text-emerald-400 font-bold mt-2"><i class="fa-solid fa-check"></i> Você já votou nesta enquete!</p>`;
+    } else {
+        container.innerHTML = v.opcoes.map(op => `
+            <button onclick="registrarVoto(${op.id})" class="w-full bg-slate-700 hover:bg-brand-600 text-white text-xs font-bold py-2 rounded mt-2 shadow transition">
+                ${op.texto}
+            </button>
+        `).join('');
+    }
+}
+
+async function registrarVoto(opcaoId) {
+    const v = estadoApp.votacaoAtual;
+    if (!v.votaram) v.votaram = [];
+    v.votaram.push(estadoApp.usuarioLogado.id); 
+    
+    const opcao = v.opcoes.find(o => o.id === opcaoId);
+    if (opcao) opcao.votos += 1; 
+    
+    await salvarVotacaoServidor();
+    await carregarDadosDoServidor();
+    renderizarVotacaoAluno();
 }
 
 function renderizarVotacaoProf() {
     const res = document.getElementById('resultadoVotacaoProf');
     const v = estadoApp.votacaoAtual;
-    if(!v) { res.classList.add('hidden'); return; }
+    if(!v || !v.pergunta) return res.classList.add('hidden');
     
     res.classList.remove('hidden');
-    res.innerHTML = `<div class="font-bold mb-2">Enquete Ativa: ${v.pergunta}</div>`;
+    const total = v.votaram ? v.votaram.length : 0;
+    
+    res.innerHTML = `
+        <div class="font-bold mb-3 text-brand-400 text-sm">Enquete: <span class="text-white">${v.pergunta}</span> <span class="text-xs text-slate-400">(${total} votos)</span></div>
+        ${v.opcoes.map(op => `
+            <div class="flex justify-between text-xs text-slate-300 bg-slate-700 p-2 rounded mb-1">
+                <span>${op.texto}</span> <strong class="text-brand-400">${op.votos} votos</strong>
+            </div>
+        `).join('')}
+    `;
 }
 
 function renderizarSelectProfAluno() {
-    const select = document.getElementById('profAlunoSelect');
-    select.innerHTML = estadoApp.alunos.filter(a => a.tipo === 'aluno').map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+    const selectAluno = document.getElementById('profAlunoSelect');
+    if (selectAluno) selectAluno.innerHTML = estadoApp.alunos.filter(a => a.tipo === 'aluno').map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+
+    const selectPontos = document.getElementById('profTipoPontos');
+    if (selectPontos) {
+        selectPontos.innerHTML = estadoApp.motivos.map(m => `<option value="${m.pontos}|${m.motivo}">${m.motivo} (+${m.pontos} pts)</option>`).join('');
+    }
+}
+
+async function cadastrarMotivoPonto(e) {
+    if(e) e.preventDefault();
+    const motivo = document.getElementById('novoMotivoNome').value;
+    const pontos = parseInt(document.getElementById('novoMotivoPontos').value);
+    
+    if (!motivo || isNaN(pontos)) return alert('Preencha o nome do motivo e os pontos!');
+    
+    await supabaseClient.from('motivos_pontos').insert([{ motivo, pontos }]);
+    document.getElementById('novoMotivoNome').value = '';
+    document.getElementById('novoMotivoPontos').value = '';
+    
+    await carregarDadosDoServidor();
+    renderizarSelectProfAluno();
+    alert('Regra criada com sucesso! Já pode usá-la.');
 }
 
 async function lancarPontos(e) {
     e.preventDefault();
     const data = document.getElementById('profDataPonto').value;
     const alunoId = document.getElementById('profAlunoSelect').value;
-    const [pontosAdd, motivo] = document.getElementById('profTipoPontos').value.split('|');
+    const selectValue = document.getElementById('profTipoPontos').value;
     
+    if (!selectValue || !alunoId) return alert('Selecione um aluno e uma regra.');
+    
+    const [pontosAdd, motivo] = selectValue.split('|');
     const aluno = estadoApp.alunos.find(a => String(a.id) === String(alunoId));
     if (!aluno) return;
 
@@ -421,11 +517,63 @@ async function lancarPontos(e) {
 }
 
 function renderizarMuralSugestoes() {
-    document.getElementById('listaSugestoesProf').innerHTML = `<p class="text-xs text-slate-500 italic">Nenhuma sugestão nova.</p>`;
+    const container = document.getElementById('listaSugestoesProf');
+    if (estadoApp.sugestoes.length === 0) return container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhuma sugestão.</p>`;
+    
+    container.innerHTML = estadoApp.sugestoes.slice().reverse().map(s => `
+        <div class="bg-slate-800 p-2.5 rounded-lg mb-2 border border-slate-700">
+            <span class="text-brand-400 text-xs font-bold">${s.aluno_nome}</span> <span class="text-[10px] text-slate-400">${s.data.split('-').reverse().join('/')}</span>
+            <p class="text-xs text-slate-300 mt-1">${s.texto}</p>
+        </div>
+    `).join('');
 }
 
 function renderizarResumosPendentes() {
-    document.getElementById('listaResumosPendentes').innerHTML = `<p class="text-xs text-slate-500 italic">Nenhum resumo pendente.</p>`;
+    const container = document.getElementById('listaResumosPendentes');
+    const pendentes = estadoApp.resumos.filter(r => r.status === 'pendente');
+    
+    if (pendentes.length === 0) return container.innerHTML = `<p class="text-xs text-slate-500 italic">Nenhum resumo pendente.</p>`;
+
+    container.innerHTML = pendentes.map(r => `
+        <div class="bg-slate-800 p-3.5 rounded-lg mb-3 border border-slate-700">
+            <p class="font-bold text-brand-400 text-sm mb-2">${r.aluno_nome}</p>
+            <p class="text-xs text-slate-200 mb-3 bg-slate-900 p-2 rounded italic">"${r.texto}"</p>
+            <div class="flex gap-2">
+                <button onclick="rejeitarResumo('${r.id}')" class="bg-red-900/50 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded font-bold transition">Apagar</button>
+                <button onclick="aprovarResumo('${r.id}', '${r.aluno_id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-bold transition">Aprovar Resumo</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function aprovarResumo(resumo_id, aluno_id) {
+    await supabaseClient.from('resumos').update({ status: 'aprovado' }).eq('id', resumo_id);
+    
+    const pontosAdd = 5;
+    const aluno = estadoApp.alunos.find(a => String(a.id) === String(aluno_id));
+    
+    if (aluno) {
+        const novosPontos = (aluno.pontos || 0) + pontosAdd;
+        await supabaseClient.from('matriculados').update({ pontos: novosPontos }).eq('id', aluno_id);
+        await supabaseClient.from('historico').insert([{ 
+            aluno_id: aluno_id, 
+            data: obterDataLocalString(), 
+            motivo: 'Resumo do Desafio', 
+            pontos: pontosAdd 
+        }]);
+    }
+    
+    await carregarDadosDoServidor();
+    atualizarTelaAuth();
+    alert(`Resumo aprovado! O aluno ganhou +5 pontos automaticamente.`);
+}
+
+async function rejeitarResumo(resumo_id) {
+    if(confirm("Apagar/rejeitar este resumo?")) {
+        await supabaseClient.from('resumos').delete().eq('id', resumo_id);
+        await carregarDadosDoServidor();
+        atualizarTelaAuth();
+    }
 }
 
 function renderizarAlunosGeral() {
@@ -460,6 +608,7 @@ function renderizarAlunosGeral() {
 async function excluirAluno(id) {
     if (confirm("Tem certeza que deseja excluir este jovem? Todo o histórico dele será apagado.")) {
         await supabaseClient.from('historico').delete().eq('aluno_id', id);
+        await supabaseClient.from('resumos').delete().eq('aluno_id', id);
         await supabaseClient.from('matriculados').delete().eq('id', id);
         
         await carregarDadosDoServidor();
@@ -488,11 +637,16 @@ function fecharModalEditarAluno() {
 async function salvarEdicaoAluno(e) {
     e.preventDefault();
     const id = document.getElementById('editIdAluno').value;
+    const novoPontos = parseInt(document.getElementById('editPontos').value) || 0;
     
+    const alunoAnterior = estadoApp.alunos.find(a => String(a.id) === String(id));
+    const pontosAntigos = alunoAnterior ? (alunoAnterior.pontos || 0) : 0;
+    const diferenca = novoPontos - pontosAntigos;
+
     const dadosAtualizados = {
         nome: document.getElementById('editNome').value,
         nascimento: document.getElementById('editNascimento').value,
-        pontos: parseInt(document.getElementById('editPontos').value) || 0,
+        pontos: novoPontos,
         avatar: document.getElementById('editNome').value.substring(0,2).toUpperCase()
     };
     
@@ -503,8 +657,18 @@ async function salvarEdicaoAluno(e) {
     
     await supabaseClient.from('matriculados').update(dadosAtualizados).eq('id', id);
     
+    if (diferenca !== 0) {
+        const motivoAjuste = diferenca > 0 ? 'Ajuste Manual (Bônus)' : 'Ajuste Manual (Correção)';
+        await supabaseClient.from('historico').insert([{
+            aluno_id: id,
+            data: obterDataLocalString(),
+            motivo: motivoAjuste,
+            pontos: diferenca 
+        }]);
+    }
+    
     await carregarDadosDoServidor();
     atualizarTelaAuth();
     fecharModalEditarAluno();
-    alert("Dados do aluno atualizados com sucesso no servidor!");
+    alert("Dados atualizados! O extrato do aluno foi corrigido automaticamente.");
 }
