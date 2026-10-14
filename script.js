@@ -622,11 +622,12 @@ function renderizarResumosPendentes() {
 
         return `
         <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow">
-            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-3">
-                <p class="font-bold text-white text-sm flex items-center gap-2">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-start gap-3 mb-3">
+                <p class="font-bold text-white text-sm flex items-center gap-2 mt-1">
                     <i class="fa-solid fa-user text-brand-400"></i> ${r.aluno_nome}
                 </p>
-                <span class="text-[10px] bg-brand-500/20 border border-brand-500/30 text-brand-400 px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider truncate max-w-[200px]" title="${tituloDesafio}">
+                <!-- Removido o truncate e adicionado ajuste para quebra de linha -->
+                <span class="text-[10px] bg-brand-500/20 border border-brand-500/30 text-brand-400 px-2.5 py-1.5 rounded-lg font-bold uppercase tracking-wider sm:text-right sm:max-w-[60%] leading-relaxed">
                     ${tituloDesafio}
                 </span>
             </div>
