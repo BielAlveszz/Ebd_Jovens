@@ -328,14 +328,18 @@ async function enviarSugestao(e) {
 
 function renderizarDesafioAluno() {
     const desafio = estadoApp.desafioAtual;
+    const u = estadoApp.usuarioLogado;
+    
     document.getElementById('alunoDesafioTitulo').textContent = desafio.titulo;
     document.getElementById('alunoDesafioPrazo').textContent = desafio.prazo ? desafio.prazo.split('-').reverse().join('/') : '--';
 
-    const formResumo = document.getElementById('formResumoAluno');
     const areaMisterio = document.getElementById('areaMisterio');
+    const formResumo = document.getElementById('formResumoAluno');
     const textarea = document.getElementById('resumoTexto');
     const btnEnviar = document.getElementById('btnEnviarResumo');
-    const msgPrazo = document.getElementById('msgPrazoEncerrado');
+    
+    // Vamos reaproveitar a div de mensagem de erro para dar os avisos de sucesso também
+    const msgPrazo = document.getElementById('msgPrazoEncerrado'); 
     const hoje = obterDataLocalString();
 
     if (desafio.misterio) {
@@ -347,16 +351,50 @@ function renderizarDesafioAluno() {
         areaMisterio.classList.add('hidden');
     }
 
-    if (hoje > desafio.prazo) {
+    // Verifica se o aluno já enviou o resumo deste desafio específico ou se tem algum pendente
+    const resumoEnviado = estadoApp.resumos.find(r => 
+        String(r.aluno_id) === String(u.id) && 
+        (r.texto.startsWith(`[${desafio.titulo}]`) || r.status === 'pendente')
+    );
+
+    // Reseta as classes de design da mensagem
+    msgPrazo.className = "hidden mt-3 p-3 border rounded-xl text-xs font-bold text-center";
+
+    if (resumoEnviado) {
+        // BLOQUEIA O CAMPO: Aluno já enviou
         textarea.disabled = true;
-        textarea.classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-900');
-        textarea.placeholder = "Envio encerrado. Aguarde o próximo desafio.";
+        textarea.value = "";
+        textarea.placeholder = "✅ Você já enviou sua resposta para este desafio!";
+        textarea.classList.add('opacity-40', 'cursor-not-allowed');
+        
         btnEnviar.classList.add('hidden');
         msgPrazo.classList.remove('hidden');
+        
+        if (resumoEnviado.status === 'aprovado') {
+            msgPrazo.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
+            msgPrazo.innerHTML = '<i class="fa-solid fa-check-circle mr-1"></i> Resumo avaliado e aprovado! (+5 XP)';
+        } else {
+            msgPrazo.classList.add('bg-amber-500/10', 'border-amber-500/30', 'text-amber-400');
+            msgPrazo.innerHTML = '<i class="fa-solid fa-clock-rotate-left mr-1"></i> Resumo enviado! Aguardando o professor avaliar.';
+        }
+    } else if (hoje > desafio.prazo) {
+        // BLOQUEIA O CAMPO: Prazo encerrou
+        textarea.disabled = true;
+        textarea.value = "";
+        textarea.placeholder = "Envio encerrado. Aguarde o próximo desafio.";
+        textarea.classList.add('opacity-40', 'cursor-not-allowed');
+        
+        btnEnviar.classList.add('hidden');
+        msgPrazo.classList.remove('hidden');
+        msgPrazo.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-400');
+        msgPrazo.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> O prazo para envio deste desafio já encerrou.';
     } else {
+        // LIBERA O CAMPO: Pode enviar
         textarea.disabled = false;
-        textarea.classList.remove('opacity-40', 'cursor-not-allowed', 'bg-slate-900');
+        textarea.value = "";
         textarea.placeholder = "Escreva seu resumo ou respostas aqui...";
+        textarea.classList.remove('opacity-40', 'cursor-not-allowed');
+        
         btnEnviar.classList.remove('hidden');
         msgPrazo.classList.add('hidden');
     }
@@ -380,16 +418,25 @@ async function enviarResumo(e) {
     const hoje = obterDataLocalString();
     if (hoje > estadoApp.desafioAtual.prazo) return alert("Erro: O prazo para este desafio já foi encerrado.");
 
-    const texto = document.getElementById('resumoTexto').value;
+    const textoDigitado = document.getElementById('resumoTexto').value;
     const u = estadoApp.usuarioLogado;
     
+    // Adiciona o título do desafio de forma oculta no começo do texto para o sistema rastrear
+    const textoFinal = `[${estadoApp.desafioAtual.titulo}]\n\n${textoDigitado}`;
+    
     await supabaseClient.from('resumos').insert([{
-        aluno_id: u.id, aluno_nome: u.nome, texto: texto, data: obterDataLocalString(), status: 'pendente'
+        aluno_id: u.id, 
+        aluno_nome: u.nome, 
+        texto: textoFinal, 
+        data: obterDataLocalString(), 
+        status: 'pendente'
     }]);
 
-    alert('Resumo enviado para avaliação!');
     document.getElementById('resumoTexto').value = '';
+    
+    // Recarrega os dados e atualiza a tela na hora para bloquear a caixa sem precisar dar F5
     await carregarDadosDoServidor();
+    atualizarTelaAuth(); 
 }
 
 async function salvarVotacao(e) {
@@ -539,7 +586,7 @@ function renderizarResumosPendentes() {
             <p class="font-bold text-brand-400 text-sm mb-2">${r.aluno_nome}</p>
             <p class="text-xs text-slate-200 mb-3 bg-slate-900 p-2 rounded italic">"${r.texto}"</p>
             <div class="flex gap-2">
-                <button onclick="rejeitarResumo('${r.id}')" class="bg-red-900/50 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded font-bold transition">Apagar</button>
+                <button onclick="rejeitarResumo('${r.id}')" class="bg-red-900/50 hover:bg-red-600 text-white text-xs px-3 py-1.5 rounded font-bold transition">Recusar</button>
                 <button onclick="aprovarResumo('${r.id}', '${r.aluno_id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-bold transition">Aprovar Resumo</button>
             </div>
         </div>
